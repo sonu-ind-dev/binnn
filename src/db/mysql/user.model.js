@@ -19,6 +19,10 @@ export function initializeUserModel(sequelize) {
                 type: DataTypes.STRING(255),
                 allowNull: false,
             },
+            access_token: {
+                type: DataTypes.STRING(255),
+                allowNull: true,
+            }
         },
         {
             sequelize,
@@ -48,8 +52,8 @@ export function initializeUserModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userVersionInfo = Object.freeze({
-    version: "1.1.0",
-    description: "Moving user_id from auto increment to UUID",
+    version: "1.2.0",
+    description: "Adding access_token column",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

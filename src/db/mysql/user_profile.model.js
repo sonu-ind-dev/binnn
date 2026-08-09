@@ -13,6 +13,10 @@ export function initializeUserProfileModel(sequelize) {
                     key: "user_id",
                 },
             },
+            email_id: {
+                type: DataTypes.STRING,
+                allowNull: true,
+            },
             name: {
                 type: DataTypes.STRING(255),
                 defaultValue: "User",
@@ -20,22 +24,18 @@ export function initializeUserProfileModel(sequelize) {
             },
             dob: {
                 type: DataTypes.BIGINT,
-                defaultValue: null,
                 allowNull: true,
             },
             gender: {
                 type: DataTypes.INTEGER, // ? 1 -> Male, 2 -> Female, 3 -> Not Prefer, 4 -> Other
-                defaultValue: null,
                 allowNull: true,
             },
             profile_image_url: {
                 type: DataTypes.STRING(255),
-                defaultValue: null,
                 allowNull: true,
             },
             pin_code: {
                 type: DataTypes.INTEGER,
-                defaultValue: null,
                 allowNull: true,
             },
         },
@@ -67,8 +67,8 @@ export function initializeUserProfileModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userProfileVersionInfo = Object.freeze({
-    version: "1.1.1",
-    description: "Moving gender column default value from 0 to null",
+    version: "1.1.2",
+    description: "Adding email and removing null values",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

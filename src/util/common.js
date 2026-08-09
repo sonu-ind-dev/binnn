@@ -1,16 +1,18 @@
-import crypto from "node:crypto";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import * as argon2 from "argon2";
 import config from "../config/config.js";
 import { responseType } from "./constant.js";
-import * as argon2 from "argon2";
-import bcrypt from "bcrypt";
+
 
 
 // & Response Formats
-export const ResponseJson = (data, message, success, type) => ({
+export const responseInfo = ({ type, success, message, data = null }) => ({
+    success,
+    type,
     data,
     message,
-    success,
-    type: responseType[type],
 });
 export const catchSuccessResponse = (successMessage = '', data = null) => ({
     data,
@@ -32,6 +34,7 @@ export const catchWarningResponse = (warningMessage = '', data = null) => ({
 });
 
 
+
 /**
 // & Encryption, Hash, Comparision
 // & | --------------------- | --------- | ----------- |
@@ -47,43 +50,50 @@ export const catchWarningResponse = (warningMessage = '', data = null) => ({
 // ? Argon2id → best choice if you can use it.
 // ? bcrypt → completely acceptable if you want simplicity and compatibility.
 */
-// export const generateHashed = async (value) => await argon2.hash(value, { type: argon2.argon2id });
-// export const verifyWithHash = async (enteredValue, hashedValue) => await argon2.verify(hashedValue, enteredValue);
 
-export const generateHashed = async (value) => await bcrypt.hash(value, 12);
-export const verifyWithHash = async (enteredValue, hashedValue) => await bcrypt.compare(enteredValue, hashedValue);
+// ? argon2
+// export const GenerateHashed = async (value) => await argon2.hash(value, { type: argon2.argon2id });
+// export const VerifyWithHash = async (enteredValue, hashedValue) => await argon2.verify(hashedValue, enteredValue);
 
-export const protectValue = (value) => {
-    if (typeof value !== "string") throw new TypeError("value must be a string to protect.");
+// ? bcrypt
+// export const GenerateHashed = async (value) => await bcrypt.hash(value, 12);
+// export const VerifyWithHash = async (enteredValue, hashedValue) => await bcrypt.compare(enteredValue, hashedValue);
 
-    const encryptionKey = Buffer.from(config.PROTECT_VALUE_ENCRYPTION_KEY, "base64");
-    const comparisonKey = Buffer.from(config.PROTECT_VALUE_COMPARISON_KEY, "base64");
-
-    if (encryptionKey.length !== 32 || comparisonKey.length !== 32) throw new Error('ENCRYPTION_KEY & COMPARISON_KEY must be decode to exactly 32 bytes.');
-
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey, iv);
-    const encryptedValue = Buffer.concat([
-        cipher.update(value, "utf8"),
-        cipher.final(),
-    ]);
-
-    return {
-        encryptedValue: encryptedValue.toString("base64url"),
-        iv: iv.toString("base64url"),
-        authTag: cipher.getAuthTag().toString("base64url"),
-        equalityTag: crypto
-            .createHmac("sha256", comparisonKey)
-            .update(value, "utf8")
-            .digest("base64url"),
-    };
+// ? crypto
+export const GenerateHashed = (value) => crypto.createHash("sha256").update(value).digest("hex");
+export const VerifyWithHash = (enteredValue, hashedValue) => {
+    let valueHash = crypto.createHash("sha256").update(enteredValue).digest("hex");
+    return hashedValue === valueHash;
 };
 
 
+
+/**
+ * 
+ * @param {Object} Token_Info Object having user_id and refresh_token_hash details
+ * @param {String} expiresIn Token expiry control
+ */
+export const Generate_JWT_Token = ({ user_id, refresh_token_hash }, expiresIn) => {
+    const Token = jwt.sign({ user_id: user.user_id, refresh_token_hash: refresh_token_hash ?? null }, config.JWT_SECRET_KEY, { expiresIn: expiresIn });
+    return Token;
+}
+
+/**
+ * 
+ * @param {String} token To fetch the token info
+ * @returns 
+ */
+export const Decode_JWT_Token = (token) => {
+    const decode = jwt.verify(token, config.JWT_SECRET_KEY);
+    return decode;
+}
+
+
+
 // ? Generate Hash OTP
-export const generateHashedOtp = async () => {
+export const GenerateHashedOtp = () => {
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const hashedOtp = await generateHashed(String(123123));
+    const hashedOtp = GenerateHashed(String(123123));
 
     return hashedOtp;
 }

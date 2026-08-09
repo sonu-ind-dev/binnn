@@ -21,12 +21,10 @@ export function initializeUserRegisterModel(sequelize) {
             },
             otp_hash: {
                 type: DataTypes.STRING(255),
-                defaultValue: null,
                 allowNull: true,
             },
             otp_expires_at: {
                 type: DataTypes.BIGINT,
-                defaultValue: null,
                 allowNull: true,
             },
             submission_count: {
@@ -36,7 +34,6 @@ export function initializeUserRegisterModel(sequelize) {
             },
             submission_blocked: { // After 5 times submission we block user for 5 minutes
                 type: DataTypes.BIGINT,
-                defaultValue: null,
                 allowNull: true,
             },
             verify_count: {
@@ -46,7 +43,6 @@ export function initializeUserRegisterModel(sequelize) {
             },
             verify_blocked: { // After 5 times otp verify we block user for 1 minute
                 type: DataTypes.BIGINT,
-                defaultValue: null,
                 allowNull: true,
             }
         },
@@ -77,8 +73,8 @@ export function initializeUserRegisterModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userRegisterVersionInfo = Object.freeze({
-    version: "1.2.1",
-    description: "Adding columns to track otp verification submission counts & handle accordingly",
+    version: "1.2.2",
+    description: "Removing default null values",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });
