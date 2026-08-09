@@ -14,11 +14,12 @@ if (awsAccessKeyId && awsSecretAccessKey) {
 }
 
 const SecretManager = new AWS.SecretsManager(awsOptions);
-
+const KMS = new AWS.KMS(awsOptions);
 
 const AWS_SM_SECRET_ID = config.AWS_SM_SECRET_ID;
 const AWS_SM_PUBLIC_KEY = config.AWS_SM_PUBLIC_KEY;
 const AWS_SM_PRIVATE_KEY = config.AWS_SM_PRIVATE_KEY;
+const HARD_CODED_AWS_KMS_KEY_ID = config.HARD_CODED_AWS_KMS_KEY_ID;
 
 const parseSecretData = (secretData) => {
     try {
@@ -223,6 +224,80 @@ export const SM_Decrypt_Value = async (encrypted_value = null) => {
         const outputPairs = { decrypted_value: decryptedValue.toString("utf8") };
 
         return SendOutputFormat(true, 'Secret Manager Privte Key decrypted the value.', outputPairs);
+    } catch (error) {
+        errorMessage = error.message;
+        return SendOutputFormat(false, errorMessage);
+    }
+};
+
+export const SM_KMS_Get_Public_Key_New = async () => {
+    let errorMessage = '';
+    try {
+        const publicKeyData = await KMS.getPublicKey({ KeyId: HARD_CODED_AWS_KMS_KEY_ID }).promise();
+        const publicKeyPem = crypto.createPublicKey({
+            key: publicKeyData.PublicKey,
+            format: 'der',
+            type: 'spki',
+        }).export({ type: 'spki', format: 'pem' }).toString();
+
+        const outputPairs = { kms_public_key: publicKeyPem, kms_key_id: HARD_CODED_AWS_KMS_KEY_ID };
+        return SendOutputFormat(true, 'AWS KMS public key fetched successfully.', outputPairs);
+    } catch (error) {
+        errorMessage = error.message;
+        return SendOutputFormat(false, errorMessage);
+    }
+};
+
+export const SM_KMS_Encrypt_Value_New = async (value = "") => {
+    let errorMessage = '';
+    try {
+        if (!value) {
+            errorMessage = "value to encrypt is empty.";
+            return SendOutputFormat(false, errorMessage);
+        }
+
+        const publicKeyResponse = await KMS.getPublicKey({ KeyId: HARD_CODED_AWS_KMS_KEY_ID }).promise();
+        const publicKeyPem = crypto.createPublicKey({
+            key: publicKeyResponse.PublicKey,
+            format: 'der',
+            type: 'spki',
+        }).export({ type: 'spki', format: 'pem' }).toString();
+
+        const encryptedValue = crypto.publicEncrypt(
+            {
+                key: publicKeyPem,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: "sha256",
+            },
+            Buffer.from(value, "utf8")
+        );
+
+        const outputPairs = { encrypted_value: encryptedValue.toString("base64") };
+        return SendOutputFormat(true, 'Value encrypted using AWS KMS public key.', outputPairs);
+    } catch (error) {
+        errorMessage = error.message;
+        return SendOutputFormat(false, errorMessage);
+    }
+};
+
+export const SM_KMS_Decrypt_Value_New = async (encrypted_value = null) => {
+    let errorMessage = '';
+    try {
+        if (!encrypted_value) {
+            errorMessage = "Encrypted value is empty.";
+            return SendOutputFormat(false, errorMessage);
+        }
+
+        const response = await KMS.decrypt({
+            CiphertextBlob: Buffer.from(encrypted_value, "base64"),
+            KeyId: HARD_CODED_AWS_KMS_KEY_ID,
+            EncryptionAlgorithm: "RSAES_OAEP_SHA_256",
+        }).promise();
+
+        const decryptedValue = response?.Plaintext?.toString("utf8") ?? "";
+        const outputPairs = { decrypted_value: decryptedValue };
+
+        return SendOutputFormat(true, 'Value decrypted by AWS KMS.', outputPairs);
     } catch (error) {
         errorMessage = error.message;
         return SendOutputFormat(false, errorMessage);

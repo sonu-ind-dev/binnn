@@ -52,5 +52,19 @@ authRouter.get("/sm-encrypt-value", secretManagerController.smEncryptValue);
  */
 authRouter.get("/sm-decrypt-value", secretManagerController.smDecryptValue);
 
+/**
+ * GET - /api/auth/sm-kms-get-public-key-new
+ */
+authRouter.get("/sm-kms-get-public-key-new", secretManagerController.smKmsGetPublicKeyNew);
+
+/**
+ * GET - /api/auth/sm-kms-encrypt-value-new
+ */
+authRouter.get("/sm-kms-encrypt-value-new", secretManagerController.smKmsEncryptValueNew);
+
+/**
+ * GET - /api/auth/sm-kms-decrypt-value-new
+ */
+authRouter.get("/sm-kms-decrypt-value-new", secretManagerController.smKmsDecryptValueNew);
 
 export default authRouter;

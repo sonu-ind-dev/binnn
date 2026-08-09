@@ -1,6 +1,6 @@
 import config from "../config/config.js";
 import { generateNewValue } from "../util/secretManager.js";
-import { SM_Generate_And_Add_Keys, SM_Get_Pair, SM_Add_Or_Update_Key, SM_Encrypt_Value, SM_Decrypt_Value } from "../util/secretManager.js";
+import { SM_Generate_And_Add_Keys, SM_Get_Pair, SM_Add_Or_Update_Key, SM_Encrypt_Value, SM_Decrypt_Value, SM_KMS_Get_Public_Key_New, SM_KMS_Encrypt_Value_New, SM_KMS_Decrypt_Value_New } from "../util/secretManager.js";
 import { catchSuccessResponse, catchWarningResponse, catchErrorResponse, GenerateHashed, VerifyWithHash, GenerateHashedOtp, Generate_JWT_Token } from "../util/common.js";
 
 
@@ -86,6 +86,50 @@ export const smDecryptValue = async (req, res) => {
     try {
         const encrypted_value = String(req.body.encrypted_value);
         const fetchedPairs = await SM_Decrypt_Value(encrypted_value);
+        const statusCode = fetchedPairs?.success ? 200 : 400;
+
+        return res.status(statusCode).json(fetchedPairs);
+    } catch (error) {
+        errorMessage = error.message;
+        console.log(`ERROR: ${req.method} ${req.baseUrl}${req.path} - Error: ${error}`);
+        return res.status(500).json(catchErrorResponse(errorMessage));
+    }
+};
+
+export const smKmsGetPublicKeyNew = async (req, res) => {
+    let errorMessage = '';
+    try {
+        const fetchedPairs = await SM_KMS_Get_Public_Key_New();
+        const statusCode = fetchedPairs?.success ? 200 : 400;
+
+        return res.status(statusCode).json(fetchedPairs);
+    } catch (error) {
+        errorMessage = error.message;
+        console.log(`ERROR: ${req.method} ${req.baseUrl}${req.path} - Error: ${error}`);
+        return res.status(500).json(catchErrorResponse(errorMessage));
+    }
+};
+
+export const smKmsEncryptValueNew = async (req, res) => {
+    let errorMessage = '';
+    try {
+        const value = String(req.body.value);
+        const fetchedPairs = await SM_KMS_Encrypt_Value_New(value);
+        const statusCode = fetchedPairs?.success ? 200 : 400;
+
+        return res.status(statusCode).json(fetchedPairs);
+    } catch (error) {
+        errorMessage = error.message;
+        console.log(`ERROR: ${req.method} ${req.baseUrl}${req.path} - Error: ${error}`);
+        return res.status(500).json(catchErrorResponse(errorMessage));
+    }
+};
+
+export const smKmsDecryptValueNew = async (req, res) => {
+    let errorMessage = '';
+    try {
+        const encrypted_value = String(req.body.encrypted_value);
+        const fetchedPairs = await SM_KMS_Decrypt_Value_New(encrypted_value);
         const statusCode = fetchedPairs?.success ? 200 : 400;
 
         return res.status(statusCode).json(fetchedPairs);
