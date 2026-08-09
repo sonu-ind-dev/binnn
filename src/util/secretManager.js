@@ -19,7 +19,7 @@ const KMS = new AWS.KMS(awsOptions);
 const AWS_SM_SECRET_ID = config.AWS_SM_SECRET_ID;
 const AWS_SM_PUBLIC_KEY = config.AWS_SM_PUBLIC_KEY;
 const AWS_SM_PRIVATE_KEY = config.AWS_SM_PRIVATE_KEY;
-const HARD_CODED_AWS_KMS_KEY_ID = config.HARD_CODED_AWS_KMS_KEY_ID;
+const AWS_KMS_KEY_ID = config.AWS_KMS_KEY_ID;
 
 const parseSecretData = (secretData) => {
     try {
@@ -233,14 +233,14 @@ export const SM_Decrypt_Value = async (encrypted_value = null) => {
 export const SM_KMS_Get_Public_Key_New = async () => {
     let errorMessage = '';
     try {
-        const publicKeyData = await KMS.getPublicKey({ KeyId: HARD_CODED_AWS_KMS_KEY_ID }).promise();
+        const publicKeyData = await KMS.getPublicKey({ KeyId: AWS_KMS_KEY_ID }).promise();
         const publicKeyPem = crypto.createPublicKey({
             key: publicKeyData.PublicKey,
             format: 'der',
             type: 'spki',
         }).export({ type: 'spki', format: 'pem' }).toString();
 
-        const outputPairs = { kms_public_key: publicKeyPem, kms_key_id: HARD_CODED_AWS_KMS_KEY_ID };
+        const outputPairs = { kms_public_key: publicKeyPem, kms_key_id: AWS_KMS_KEY_ID };
         return SendOutputFormat(true, 'AWS KMS public key fetched successfully.', outputPairs);
     } catch (error) {
         errorMessage = error.message;
@@ -256,7 +256,7 @@ export const SM_KMS_Encrypt_Value_New = async (value = "") => {
             return SendOutputFormat(false, errorMessage);
         }
 
-        const publicKeyResponse = await KMS.getPublicKey({ KeyId: HARD_CODED_AWS_KMS_KEY_ID }).promise();
+        const publicKeyResponse = await KMS.getPublicKey({ KeyId: AWS_KMS_KEY_ID }).promise();
         const publicKeyPem = crypto.createPublicKey({
             key: publicKeyResponse.PublicKey,
             format: 'der',
@@ -290,7 +290,7 @@ export const SM_KMS_Decrypt_Value_New = async (encrypted_value = null) => {
 
         const response = await KMS.decrypt({
             CiphertextBlob: Buffer.from(encrypted_value, "base64"),
-            KeyId: HARD_CODED_AWS_KMS_KEY_ID,
+            KeyId: AWS_KMS_KEY_ID,
             EncryptionAlgorithm: "RSAES_OAEP_SHA_256",
         }).promise();
 
