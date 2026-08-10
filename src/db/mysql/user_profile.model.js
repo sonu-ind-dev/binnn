@@ -13,8 +13,8 @@ export function initializeUserProfileModel(sequelize) {
                     key: "user_id",
                 },
             },
-            email_id: {
-                type: DataTypes.STRING,
+            email: {
+                type: DataTypes.STRING(255),
                 allowNull: true,
             },
             name: {
@@ -67,8 +67,8 @@ export function initializeUserProfileModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userProfileVersionInfo = Object.freeze({
-    version: "1.1.2",
-    description: "Adding email and removing null values",
+    version: "1.1.3",
+    description: "Renaming email_id column to email",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

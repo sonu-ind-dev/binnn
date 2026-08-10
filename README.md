@@ -26,14 +26,14 @@ For example: `http://localhost:4000/api/auth/register`
 
 ```json
 {
-  "phone_number": 1234567890,
+  "phone_number": "1234567890",
   "password": "YourPassword123"
 }
 ```
 
 #### Validations
 
-- `phone_number` must be provided and numeric.
+- `phone_number` must be provided and string.
 - `password` must be provided and non-empty.
 - If a user already exists in the main user table, registration is rejected.
 - The same phone number can retry registration up to 5 times before a temporary block is applied.
@@ -52,7 +52,7 @@ For example: `http://localhost:4000/api/auth/register`
   "success": true,
   "type": "success",
   "data": {
-    "phone_number": 1234567890,
+    "phone_number": "1234567890",
     "otp_expires_at": 1660000000000
   },
   "message": "User registered successfully."
@@ -71,7 +71,7 @@ For example: `http://localhost:4000/api/auth/register`
 
 ```json
 {
-  "phone_number": 1234567890,
+  "phone_number": "1234567890",
   "otp": "123456"
 }
 ```
@@ -105,7 +105,7 @@ For example: `http://localhost:4000/api/auth/register`
 
 ```json
 {
-  "phone_number": 1234567890,
+  "phone_number": "1234567890",
   "password": "YourPassword123"
 }
 ```

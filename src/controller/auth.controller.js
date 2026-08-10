@@ -21,7 +21,7 @@ import { catchSuccessResponse, catchWarningResponse, catchErrorResponse, Generat
 */
 /**
  * @route POST /api/auth/register
- * @param {Number} phone_number To register the new user
+ * @param {String} phone_number To register the new user
  * @param {String} password To protect user account accessibility 
  * @description To register intial user with basic info but verification pending
  */
@@ -29,7 +29,7 @@ export const register = async (req, res) => {
     let errorMessage = '';
     try {
         // Fetch required info from req & handle validation
-        const phone_number = Number(req.body.phone_number);
+        const phone_number = String(req.body.phone_number);
         const password = String(req.body.password ?? '');
 
         if (!phone_number || !password) {
@@ -110,7 +110,7 @@ export const register = async (req, res) => {
 /**
  * 
  * @route POST /api/auth/verify-otp
- * @param {Number} phone_number To verify phone number
+ * @param {String} phone_number To verify phone number
  * @param {Number} otp Entered otp by user
  * @description User phone number verification
  */
@@ -118,7 +118,7 @@ export const verifyOtp = async (req, res) => {
     let errorMessage = '';
     try {
         // Fetch required info from req & handle validation
-        const phone_number = Number(req.body.phone_number);
+        const phone_number = String(req.body.phone_number);
         const otp = String(req.body.otp ?? '');
 
         if (!phone_number || !otp) {
@@ -218,7 +218,7 @@ export const verifyOtp = async (req, res) => {
  */
 /**
  * 
- * @param {Number} phone_number User Phone Number
+ * @param {String} phone_number User Phone Number
  * @param {String} password User entered password in hash form 
  * @description Login user with the help of entered phone_number & password
  */
@@ -226,7 +226,7 @@ export const login = async (req, res) => {
     let errorMessage = '';
     try {
         // Fetch required info from req & handle validation
-        const phone_number = Number(req.body.phone_number);
+        const phone_number = String(req.body.phone_number);
         const password = String(req.body.password) ?? '';
 
         if (!phone_number || !password) {
