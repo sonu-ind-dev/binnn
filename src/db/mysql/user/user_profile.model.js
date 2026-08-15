@@ -5,9 +5,14 @@ export class UserProfile extends Model { }
 export function initializeUserProfileModel(sequelize) {
     UserProfile.init(
         {
-            user_id: {
+            profile_id: {
                 type: DataTypes.UUID,
                 primaryKey: true,
+                defaultValue: DataTypes.UUIDV4,
+            },
+            user_id: {
+                type: DataTypes.UUID,
+                unique: true,
                 references: {
                     model: "user",
                     key: "user_id",
@@ -67,8 +72,8 @@ export function initializeUserProfileModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userProfileVersionInfo = Object.freeze({
-    version: "1.1.3",
-    description: "Renaming email_id column to email",
+    version: "1.1.5",
+    description: "Making project_id to auto generative to default uuid",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

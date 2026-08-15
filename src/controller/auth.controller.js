@@ -1,6 +1,7 @@
 import moment from "moment";
 import config from "../config/config.js";
 import RefreshTokenModel from "../db/mongo/refresh_token.model.js";
+import PostInfoModel from "../db/mongo/post/post_info.model.js";
 import { User, UserProfile, UserRegister } from "../db/mysql/index.js";
 import { catchSuccessResponse, catchWarningResponse, catchErrorResponse, GenerateHashed, VerifyWithHash, GenerateHashedOtp, Generate_JWT_Token } from "../util/common.js";
 
@@ -249,7 +250,7 @@ export const login = async (req, res) => {
             return res.status(401).json(catchErrorResponse(errorMessage));
         }
 
-        const user_profile = await UserProfile.findByPk(user?.user_id);
+        const user_profile = await UserProfile.findOne({ where: { user_id: user?.user_id } });
 
         // Create refresh token, access token & save refresh token in refresh_token collection
         const refresh_token = Generate_JWT_Token({ user_id: user?.user_id }, "7d");

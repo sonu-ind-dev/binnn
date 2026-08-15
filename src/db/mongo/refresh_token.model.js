@@ -1,7 +1,5 @@
 import mongoose, { model } from "mongoose";
 
-
-
 const refreshTokenSchema = new mongoose.Schema({
     user_id: {
         type: String,
