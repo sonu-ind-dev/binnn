@@ -19,9 +19,9 @@ export function initializePostModel(sequelize) {
                 type: DataTypes.UUID,
                 allowNull: true,
             },
-            delete_at: {
-                type: DataTypes.BIGINT,
-                allowNull: true,
+            visible: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: true,
             }
         },
         {
@@ -44,8 +44,8 @@ export function initializePostModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const postVersionInfo = Object.freeze({
-    version: "1.1.1",
-    description: "Initial Version",
+    version: "1.1.2",
+    description: "Removing delete_at and replacing with visible boolean column",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })
