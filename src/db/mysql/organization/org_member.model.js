@@ -18,7 +18,7 @@ export function initializeOrgMemberModel(sequelize) {
                 type: DataTypes.UUID,
                 allowNull: false,
             },
-            org_member_type_id: {
+            member_position_id: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             }
@@ -43,8 +43,8 @@ export function initializeOrgMemberModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const orgMemberVersionInfo = Object.freeze({
-    version: "1.1.1",
-    description: "Initial Version",
+    version: "1.1.2",
+    description: "Renaming org_member_type_id to member_position_id column",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

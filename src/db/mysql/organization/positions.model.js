@@ -1,16 +1,16 @@
 import { DataTypes, Model } from "sequelize";
 
-export class OrgMemberPosition extends Model { }
+export class Position extends Model { }
 
-export function initializeOrgMemberPositionModel(sequelize) {
-    OrgMemberPosition.init(
+export function initializePositionsModel(sequelize) {
+    Position.init(
         {
-            org_member_type_id: {
+            position_id: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
-            member_position: {
+            position: {
                 type: DataTypes.STRING,
                 allowNull: false,
                 unique: true,
@@ -18,13 +18,13 @@ export function initializeOrgMemberPositionModel(sequelize) {
         },
         {
             sequelize,
-            modelName: "OrgMemberPosition",
-            tableName: "org_member_position",
+            modelName: "Positions",
+            tableName: "positions",
             indexes: [],
         }
     )
 
-    return OrgMemberPosition;
+    return Position;
 }
 
 /**
@@ -35,7 +35,7 @@ export function initializeOrgMemberPositionModel(sequelize) {
  * ? Step 04: Change databaseTableUpdateFlag to false and tablesUpdateFlags of that particular table to false in /src/db/mysql/index.js file
  * & That's it your table related changes are completed.
  */
-export const orgMemberPositionVersionInfo = Object.freeze({
+export const positionsVersionInfo = Object.freeze({
     version: "1.1.1",
     description: "Initial Version",
     updated_by: "sonu.ind.dev@gmail.com",

@@ -44,8 +44,8 @@ export function initializePostModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const postVersionInfo = Object.freeze({
-    version: "1.1.2",
-    description: "Removing delete_at and replacing with visible boolean column",
+    version: "1.1.4",
+    description: "Removing posted_by_org_id column default value as null",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })
