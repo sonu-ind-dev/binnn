@@ -10,6 +10,11 @@ export function initializeOrganizationModel(sequelize) {
                 defaultValue: DataTypes.UUIDV4,
                 primaryKey: true,
             },
+            org_code: {
+                type: DataTypes.STRING,
+                allowNull: false,
+                unique: true,
+            },
             name: {
                 type: DataTypes.STRING,
                 allowNull: false,
@@ -44,8 +49,8 @@ export function initializeOrganizationModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const organizationVersionInfo = Object.freeze({
-    version: "1.1.1",
-    description: "Initial Version",
+    version: "1.2.1",
+    description: "Adding org_code column",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

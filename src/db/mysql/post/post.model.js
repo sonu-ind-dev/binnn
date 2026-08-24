@@ -1,4 +1,3 @@
-import { version } from "mongoose";
 import { DataTypes, Model } from "sequelize";
 
 export class Post extends Model { }
