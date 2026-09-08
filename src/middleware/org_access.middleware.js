@@ -4,55 +4,56 @@ import { catchErrorResponse, catchSuccessResponse, catchWarningResponse } from "
 
 
 
-export const org_tasks = {
-    'make_super_admin': 'make_super_admin',
-    'make_admin': 'make_admin',
-    'make_member': 'make_member',
 
-    'create-post': 'create-post',
-    'approve_post': 'approve_post',
+const org_activities_position_ids = {
+    // Owner Access
+    'make_super_admin': [1],
+
+    // Owner or Super Admin Access
+    'make_admin': [1, 2],
+    'rename-organization': [1, 2],
+    'update-org-code': [1, 2],
+    'update-org-location': [1, 2],
+
+    // Owner, Super Admin or Admin Access
+    'make_member': [1, 2, 3],
+    'approve_post': [1, 2, 3],
+
+    // Owner, Super Admin, Admin or Member Access
+    'org-members': [1, 2, 3, 4],
+
+    // Owner, Super Admin, Admin, Member Access or Follower
+    'create-post': [1, 2, 3, 4, 5],
+}
+
+const check_task_access = (member_position_id, activity) => {
+    if (!member_position_id || !activity) return false;
+
+    const member_activity_positions = org_activities_position_ids[activity] ?? [];
+    return member_activity_positions.includes(member_position_id);
 };
 
-const check_task_access = (member_position_id, access_type) => {
-    if (!member_position_id || !access_type) return false;
-
-    switch (access_type) {
-        // Org Member Type Changes Access
-        case 'make_super_admin':
-            return [1].includes(member_position_id);
-            break;
-        case 'make_admin':
-            return [1, 2].includes(member_position_id);
-            break;
-        case 'make_member':
-            return [1, 2, 3].includes(member_position_id);
-            break;
-
-
-        // Org Post Related Access
-        case 'create-post':
-            return [1, 2, 3, 4].includes(member_position_id);
-            break;
-        case 'approve_post':
-            return [1, 2, 3].includes(member_position_id);
-            break;
-        default:
-            return false;
-    }
-};
-
-export const memberAccessCheck = (access_type = null) => {
+export const memberAccessCheck = (activity = null) => {
     return async (req, res, next) => {
 
         let errorMessage = '';
         try {
-            const user_id = req.user_id;
-            const org_id = req.org_id || req.body.org_id || req.params.org_id;
+            const user_id = req.user_id ?? '1';
+            const org_id = req.body.org_id || req.params.org_id || req.headers.org_id;;
 
             if (!org_id) next();
 
-            if (!user_id || !access_type) {
-                errorMessage = 'user_id or access_type is not present';
+            req.org_id = org_id;
+
+            const member_activity_positions = org_activities_position_ids[activity] ?? [];
+
+            if (!member_activity_positions.length) {
+                errorMessage = `There is no activity present such as ${activity}`;
+                return res.status(400).json(catchErrorResponse(errorMessage));
+            }
+
+            if (!user_id || !activity) {
+                errorMessage = 'user_id or activity is not present';
                 return res.status(400).json(catchErrorResponse(errorMessage));
             }
 

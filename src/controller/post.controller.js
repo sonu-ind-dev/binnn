@@ -1,6 +1,8 @@
 import { catchErrorResponse, catchSuccessResponse } from "../util/common.js";
-import { Organization, Post, PostOrgTag, PostUserTag, User } from "../db/mysql/index.js";
+import { Organization, Post, PostOrgTag, PostUserTag, Status, User, UserProfile } from "../db/mysql/index.js";
 import PostInfoModel from "../db/mongo/post/post_info.model.js";
+import { raw } from "express";
+import { Op } from "sequelize";
 
 
 
@@ -95,6 +97,114 @@ export const createPost = async (req, res) => {
 
         const data = { post, postInfo, postUsersTag, postOrgsTag }
         return res.status(201).json(catchSuccessResponse(`Post created successfully`, data));
+
+    } catch (error) {
+        errorMessage = error.message;
+        console.log(`ERROR: ${req.method} ${req.baseUrl}${req.path} - Error: ${error}`);
+        return res.status(500).json(catchErrorResponse(errorMessage));
+    }
+}
+
+
+
+// Latest 24 hr ago posts not by user
+export const posts = async (req, res) => {
+    let errorMessage = '';
+    try {
+        const { user_id, latitude, longitude, offset, limit } = req.body;
+
+        let posts = await Post.findAll({
+            where: {
+                posted_by_user_id: {
+                    [Op.ne]: [user_id]
+                },
+                visible: true,
+            },
+            offset,
+            limit,
+        });
+
+        posts = posts.map(async post => {
+            let ownerInfo = {};
+
+            if (post.posted_by_user_id) {
+                ownerInfo = await UserProfile.findOne({
+                    where: {
+                        user_id: post.posted_by_user_id,
+                    },
+                    attributes: ['profile_id', 'user_id', 'name', 'profile_image_url']
+                });
+            } else if (post.posted_by_org_id) {
+                ownerInfo = await Organization.findOne({
+                    where: {
+                        org_id: post.org_id,
+                    },
+                    attributes: ['org_id', 'name', 'org_code', 'profile_image_url']
+                });
+            }
+
+            const postInfo = await PostInfoModel.findOne({ where: { post_id: post.post_id } }).lean();
+
+            const tagUserCount = await PostUserTag.count({ where: { post_id: post.post_id } });
+            const tagOrgCount = await PostOrgTag.count({ where: { post_id: post.post_id } });
+
+
+            post.postInfo = postInfo;
+            post.ownerInfo = ownerInfo;
+            post.totalTagCount = tagUserCount + tagOrgCount;
+
+            return post;
+        });
+
+        const status = await Status.findAll({ raw: true });
+        const data = { posts, status };
+
+        return res.status(200).json(catchSuccessResponse(`Latest post data fetched successfully`, data));
+
+    } catch (error) {
+        errorMessage = error.message;
+        console.log(`ERROR: ${req.method} ${req.baseUrl}${req.path} - Error: ${error}`);
+        return res.status(500).json(catchErrorResponse(errorMessage));
+    }
+}
+
+
+
+export const postTaggedInfo = async (req, res) => {
+    let errorMessage = '';
+    try {
+        const { post_id } = req.body;
+
+        let postTaggedUsers = await PostUserTag.findAll({ where: { post_id }, raw: true });
+        let postTaggedOrgs = await PostOrgTag.findAll({ where: { post_id }, raw: true });
+
+        postTaggedUsers = postTaggedUsers.map(async taggedUser => {
+            const userInfo = await UserProfile.findOne({
+                where: { user_id: postTaggedUsers.user_id },
+                attributes: ['profile_id', 'user_id', 'name', 'profile_image_url'],
+                raw: true,
+            });
+
+            taggedUser = { ...taggedUser, ...userInfo };
+
+            return taggedUser;
+        });
+
+        postTaggedOrgs = postTaggedOrgs.map(async taggedOrg => {
+            const orgInfo = await Organization.findOne({
+                where: { org_id: taggedOrg.org_id },
+                attributes: ['org_id', 'org_code', 'name', 'profile_image_url'],
+                raw: true,
+            });
+
+            taggedOrg = { ...taggedOrg, ...orgInfo };
+
+            return taggedOrg;
+        });
+
+        const data = { postTaggedUsers, postTaggedOrgs };
+
+        return res.status(200).json(catchSuccessResponse(`Post tagged info fetched successfully`, data));
 
     } catch (error) {
         errorMessage = error.message;

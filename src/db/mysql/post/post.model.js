@@ -20,7 +20,6 @@ export function initializePostModel(sequelize) {
             },
             visible: {
                 type: DataTypes.BOOLEAN,
-                defaultValue: true,
             }
         },
         {
@@ -43,8 +42,8 @@ export function initializePostModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const postVersionInfo = Object.freeze({
-    version: "1.1.4",
-    description: "Removing posted_by_org_id column default value as null",
+    version: "1.1.5",
+    description: "Removing visible column default value",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

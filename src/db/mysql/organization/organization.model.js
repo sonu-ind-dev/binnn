@@ -15,6 +15,10 @@ export function initializeOrganizationModel(sequelize) {
                 allowNull: false,
                 unique: true,
             },
+            profile_image_url: {
+                type: DataTypes.STRING,
+                allowNull: true,
+            },
             name: {
                 type: DataTypes.STRING,
                 allowNull: false,
@@ -49,8 +53,8 @@ export function initializeOrganizationModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const organizationVersionInfo = Object.freeze({
-    version: "1.2.1",
-    description: "Adding org_code column",
+    version: "1.3.1",
+    description: "Adding profile_image_url column",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })
