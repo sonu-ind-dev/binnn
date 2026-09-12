@@ -52,12 +52,7 @@ export function initializeUserRegisterModel(sequelize) {
             tableName: "user_register",
             createdAt: "created_at",
             updatedAt: "updated_at",
-            indexes: [
-                {
-                    name: "idx_user_register_verification",
-                    fields: ["otp_expires_at"],
-                },
-            ],
+            indexes: [],
         },
     );
 
@@ -73,8 +68,8 @@ export function initializeUserRegisterModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userRegisterVersionInfo = Object.freeze({
-    version: "1.2.2",
-    description: "Removing default null values",
+    version: "1.2.3",
+    description: "Removing indexes for now",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

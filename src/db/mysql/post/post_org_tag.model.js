@@ -13,14 +13,26 @@ export function initializePostOrgTagModel(sequelize) {
             post_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
+                references: {
+                    model: "post",
+                    key: "post_id",
+                },
             },
             org_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
+                references: {
+                    model: "organization",
+                    key: "org_id",
+                },
             },
             approved_by: {
                 type: DataTypes.UUID,
                 allowNull: true,
+                references: {
+                    model: "user",
+                    key: "user_id",
+                },
             }
         },
         {
@@ -43,8 +55,8 @@ export function initializePostOrgTagModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const postOrgTagVersionInfo = Object.freeze({
-    version: "1.1.1",
-    description: "Initial Version",
+    version: "1.1.2",
+    description: "Implemented foreign key",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

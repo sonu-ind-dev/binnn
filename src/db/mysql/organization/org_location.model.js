@@ -14,6 +14,10 @@ export function initializeOrgLocationModel(sequelize) {
                 type: DataTypes.UUID,
                 allowNull: false,
                 unique: true,
+                references: {
+                    model: "organization",
+                    key: "org_id",
+                },
             },
             street: {
                 type: DataTypes.STRING,
@@ -56,8 +60,8 @@ export function initializeOrgLocationModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const orgLocationVersionInfo = Object.freeze({
-    version: "1.1.1",
-    description: "Initial Version",
+    version: "1.1.2",
+    description: "Implemented foreign key",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

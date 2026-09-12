@@ -30,13 +30,7 @@ export function initializeUserModel(sequelize) {
             tableName: "user",
             createdAt: "created_at",
             updatedAt: "updated_at",
-            indexes: [
-                {
-                    name: "idx_user_phone_number",
-                    unique: true,
-                    fields: ["phone_number"],
-                },
-            ],
+            indexes: [],
         }
     )
 
@@ -52,8 +46,8 @@ export function initializeUserModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userVersionInfo = Object.freeze({
-    version: "1.2.0",
-    description: "Adding access_token column",
+    version: "1.2.1",
+    description: "Removing indexing for now",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

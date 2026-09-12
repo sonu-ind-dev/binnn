@@ -15,6 +15,13 @@ export function initializeOrganizationModel(sequelize) {
                 allowNull: false,
                 unique: true,
             },
+            owner_user_id: {
+                type: DataTypes.UUID,
+                references: {
+                    model: "user",
+                    key: "user_id",
+                },
+            },
             profile_image_url: {
                 type: DataTypes.STRING,
                 allowNull: true,
@@ -26,7 +33,7 @@ export function initializeOrganizationModel(sequelize) {
             email: {
                 type: DataTypes.STRING,
                 allowNull: false,
-                unique: true,
+                // unique: true,
             },
             contact_number: {
                 type: DataTypes.BIGINT,
@@ -53,8 +60,8 @@ export function initializeOrganizationModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const organizationVersionInfo = Object.freeze({
-    version: "1.3.1",
-    description: "Adding profile_image_url column",
+    version: "1.4.1",
+    description: "Adding owner_user_id column & removing email unique true property",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

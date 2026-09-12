@@ -50,13 +50,6 @@ export function initializeUserProfileModel(sequelize) {
             tableName: "user_profile",
             createdAt: "created_at",
             updatedAt: "updated_at",
-            indexes: [
-                {
-                    name: "idx_user_profile_user_id",
-                    unique: false,
-                    fields: ["user_id"],
-                },
-            ],
         }
     )
 
@@ -72,8 +65,8 @@ export function initializeUserProfileModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const userProfileVersionInfo = Object.freeze({
-    version: "1.1.5",
-    description: "Making project_id to auto generative to default uuid",
+    version: "1.1.6",
+    description: "Removing indexes for now",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 });

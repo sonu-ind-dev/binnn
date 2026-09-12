@@ -13,13 +13,26 @@ export function initializePostModel(sequelize) {
             posted_by_user_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
+                references: {
+                    model: "user",
+                    key: "user_id",
+                },
             },
             posted_by_org_id: {
                 type: DataTypes.UUID,
                 allowNull: true,
+                references: {
+                    model: "organization",
+                    key: "org_id",
+                },
             },
             visible: {
                 type: DataTypes.BOOLEAN,
+            },
+            status_id: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: 1,
             }
         },
         {
@@ -42,8 +55,8 @@ export function initializePostModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const postVersionInfo = Object.freeze({
-    version: "1.1.5",
-    description: "Removing visible column default value",
+    version: "1.2.5",
+    description: "Adding status_id column & implemented foreign key",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

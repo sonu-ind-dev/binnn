@@ -10,9 +10,10 @@ export const createOrganization = async (req, res) => {
     let errorMessage = '';
     try {
         const user_id = req.user_id;
+        const owner_user_id = user_id;
         const { org_code, name, email, contact_number, street, city, country, pin_code } = req.body;
 
-        const organization = await Organization.create({ org_code, name, email, contact_number });
+        const organization = await Organization.create({ org_code, owner_user_id, name, email, contact_number });
         const org_id = organization?.org_id;
 
         if (!org_id) {

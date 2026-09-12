@@ -5,10 +5,6 @@ const postInfoSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.UUID,
         required: [true, "Post is required"]
     },
-    status_id: {
-        type: mongoose.Schema.Types.Int32,
-        default: 0,
-    },
     caption: {
         type: String,
     },
