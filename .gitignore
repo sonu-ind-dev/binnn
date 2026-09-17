@@ -1,4 +1,4 @@
 /.env
 /node_modules
 /package-lock.json
-# /src/db/mysql/index.js
+/src/db/mysql/index.js
