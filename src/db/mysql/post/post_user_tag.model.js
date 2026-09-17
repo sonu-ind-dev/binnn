@@ -25,7 +25,11 @@ export function initializePostUserTagModel(sequelize) {
                     model: "user",
                     key: "user_id",
                 },
-            }
+            },
+            accepted: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false,
+            },
         },
         {
             sequelize,
@@ -47,8 +51,8 @@ export function initializePostUserTagModel(sequelize) {
  * & That's it your table related changes are completed.
  */
 export const postUserTagVersionInfo = Object.freeze({
-    version: "1.1.2",
-    description: "Implemented foreign key",
+    version: "1.2.2",
+    description: "Adding accepted column",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

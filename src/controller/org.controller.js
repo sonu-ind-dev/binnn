@@ -1,47 +1,79 @@
 import { raw } from "mysql2";
-import { Organization, OrgLocation, OrgMember, Positions, Post, UserProfile } from "../db/mysql/index.js";
+import { Organization, OrgLocation, OrgMember, Positions, Post, PostInfo, Status, User, UserProfile } from "../db/mysql/index.js";
 import { catchErrorResponse, catchSuccessResponse } from "../util/common.js";
 import { positions } from "../util/constant.js";
-import PostInfoModel from "../db/mongo/post/post_info.model.js";
 import { Op } from "sequelize";
+
+import { sequelize } from "../config/database.js";
 
 
 export const createOrganization = async (req, res) => {
     let errorMessage = '';
     try {
+        const transaction = await sequelize.transaction();
         const user_id = req.user_id;
         const owner_user_id = user_id;
         const { org_code, name, email, contact_number, street, city, country, pin_code } = req.body;
 
-        const organization = await Organization.create({ org_code, owner_user_id, name, email, contact_number });
-        const org_id = organization?.org_id;
+        const sameCodeOrg = await Organization.count({ where: { org_code, } });
 
-        if (!org_id) {
-            errorMessage = 'No organization created';
+        if (sameCodeOrg > 0) {
+            await transaction.rollback();
+            errorMessage = 'This organization code has already been used by another organization. Please change & try again!';
             return res.status(400).json(catchErrorResponse(errorMessage));
         }
 
-        const orgLocation = await OrgLocation.create({ org_id, street, city, country, pin_code });
+        const organization = await Organization.create(
+            { org_code, owner_user_id, name, email, contact_number },
+            { transaction },
+        );
+        const org_id = organization?.org_id;
+
+        if (!org_id) {
+            await transaction.rollback();
+            errorMessage = 'Failed while creating the organization. Please try again!';
+            return res.status(400).json(catchErrorResponse(errorMessage));
+        }
+
+        const orgLocation = await OrgLocation.create(
+            { org_id, street, city, country, pin_code },
+            { transaction },
+        );
+
+        if (!orgLocation) {
+            await transaction.rollback();
+            errorMessage = 'Failed while storing organization localion. Please try again!';
+            return res.status(400).json(catchErrorResponse(errorMessage));
+        }
+
         const position = await Positions.findOne({
             where: { position: positions['1'] },
             attributes: ['position_id'],
             raw: true
         });
-        const orgMember = await OrgMember.create({
-            org_id,
-            user_id,
-            member_position_id: position?.position_id
-        });
+
+        if (!position) {
+            await transaction.rollback();
+            throw new Error('Position not found');
+        }
+
+        const orgMember = await OrgMember.create(
+            { org_id, user_id, member_position_id: position?.position_id },
+            { transaction },
+        );
 
         if (!orgMember) {
-            errorMessage = 'Organization created but failed to provide ownership to user';
+            await transaction.rollback();
+            errorMessage = 'Failed while providing ownership of the organization. Please try again!';
             return res.status(400).json(catchErrorResponse(errorMessage));
         }
 
+        await transaction.commit();
         const data = { organization, orgLocation, orgMember };
         return res.status(201).json(catchSuccessResponse(`Organization ${organization?.name} created successfully`, data));
 
     } catch (error) {
+        await transaction.rollback();
         errorMessage = error.message;
         console.log(`ERROR: ${req.method} ${req.baseUrl}${req.path} - Error: ${error}`);
         return res.status(500).json(catchErrorResponse(errorMessage));
@@ -57,38 +89,53 @@ export const allOrganization = async (req, res) => {
 
         const orgMember = await OrgMember.findAll({
             where: { user_id },
-            attributes: ['org_id', 'member_position_id'],
-            raw: true
+            include: [
+                {
+                    model: Organization,
+                    as: "organization",
+                    include: [
+                        {
+                            model: OrgLocation,
+                            as: "orgLocation",
+                        },
+                        {
+                            model: OrgMember,
+                            as: "orgMember",
+                            include: [
+                                {
+                                    model: User,
+                                    as: "user",
+                                    include: [
+                                        {
+                                            model: UserProfile,
+                                            as: "userProfile",
+                                            attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                                        },
+                                    ],
+                                },
+                                {
+                                    model: Positions,
+                                    as: "position",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: Positions,
+                    as: "position",
+                },
+            ],
         });
 
         if (!orgMember.length) return res.status(200).json(catchSuccessResponse('User is not a part of any organization'));
 
-        const owner_position = await Positions.findOne({
-            where: { position: positions['1'] },
-            raw: true,
+        const userOwnOrgInfo = orgMember.filter(memberInfo => {
+            return memberInfo.position.position_id === 1
         });
 
-        // REDIS
-        const userOwnOrgIds = orgMember
-            .filter(member => member.member_position_id === owner_position.position_id)
-            .map(member => member.org_id);
-
-        const userOtherOrgIds = orgMember
-            .filter(member => member.member_position_id !== owner_position.position_id)
-            .map(member => member.org_id);
-
-        const userOwnOrgInfo = await Organization.findAll({
-            where: {
-                org_id: userOwnOrgIds,
-            },
-            attributes: ['org_id', 'org_code', 'name'],
-        });
-
-        const userOtherOrgInfo = await Organization.findAll({
-            where: {
-                org_id: userOtherOrgIds,
-            },
-            attributes: ['org_id', 'org_code', 'name'],
+        const userOtherOrgInfo = orgMember.filter(memberInfo => {
+            return memberInfo.position.position_id !== 1
         });
 
         const data = { userOwnOrgInfo, userOtherOrgInfo };
@@ -108,45 +155,103 @@ export const organization = async (req, res) => {
     try {
         const org_id = req.params.org_id;
 
-        const org = await Organization.findByPk(org_id, { raw: true });
+        const organization = await Organization.findByPk(org_id,
+            {
+                include: [
+                    {
+                        model: User,
+                        as: "user"
+                    },
+                    {
+                        model: OrgLocation,
+                        as: "orgLocation",
+                    },
+                    {
+                        model: OrgMember,
+                        as: "orgMember",
+                        include: [
+                            {
+                                model: User,
+                                as: "user",
+                                include: [
+                                    {
+                                        model: UserProfile,
+                                        as: "userProfile",
+                                        attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                                    },
+                                ],
+                            },
+                            {
+                                model: Positions,
+                                as: "position",
+                            },
+                        ],
+                    },
+                ],
+            },
+        );
 
-        if (!org) {
+        if (!organization) {
             errorMessage = 'Organization not found';
             return res.status(404).json(catchErrorResponse(errorMessage));
         }
 
-        const orgLocation = await OrgLocation.findOne({ where: { org_id }, raw: true });
-        const orgMemberCount = await OrgMember.count({ where: { org_id } });
-        let orgLatestPosts = await Post.findAll({
-            where: { posted_by_org_id: org_id },
+        const orgLatestPosts = await Post.findAll({
+            where: {
+                posted_by_org_id: org_id,
+                status: 1,
+            },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+                {
+                    model: Organization,
+                    as: 'organization'
+                },
+                {
+                    model: PostInfo,
+                    as: 'postInfo'
+                },
+                {
+                    model: PostUserTag,
+                    as: "postUserTag",
+                    include: [
+                        {
+                            model: User,
+                            as: "user",
+                            include: [
+                                {
+                                    model: UserProfile,
+                                    as: "userProfile",
+                                    attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: PostOrgTag,
+                    as: "postOrgTag",
+                    include: [
+                        {
+                            model: Organization,
+                            as: "organization",
+                        },
+                    ],
+                },
+                {
+                    model: Status,
+                    as: "status",
+                },
+            ],
             order: [['createdAt', 'DESC']],
             limit: 10,
             offset: 0,
-            raw: true,
         });
 
-        const orgLatestPostIds = orgLatestPosts.map(post => post.post_id);
-
-        const latestPostsInfo = await PostInfoModel.findAll({
-            where: {
-                post_id: { $in: orgLatestPostIds }
-            }
-        }).lean();
-
-        orgLatestPosts = orgLatestPosts.map(post => {
-            const postInfo = latestPostsInfo?.find(info => info.post_id == post.post_id) ?? [];
-            post.postInfo = postInfo || null;
-
-            return post;
-        });
-
-        if (!orgLocation) {
-            errorMessage = 'Organization location not found';
-            return res.status(404).json(catchErrorResponse(errorMessage));
-        }
-
-        // REDIS
-        const data = { organization: org, orgLocation, orgMemberCount, orgLatestPosts };
+        const data = { organization, orgLatestPosts };
         return res.status(200).json(catchSuccessResponse('Organization details fetched successfully', data));
 
     } catch (error) {
@@ -191,8 +296,8 @@ export const updateOrgCode = async (req, res) => {
         const sameCodeOrg = await Organization.count({
             where: {
                 org_code: updated_org_code,
-                id: {
-                    [Op.ne]: org_id
+                org_id: {
+                    [Op.notIn]: [org_id]
                 },
             }
         });
@@ -276,32 +381,26 @@ export const orgMembers = async (req, res) => {
             where: { org_id },
             offset,
             limit,
-            raw: true,
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    include: [
+                        {
+                            model: UserProfile,
+                            as: "userProfile",
+                            attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                        },
+                    ],
+                },
+                {
+                    model: Positions,
+                    as: "position",
+                },
+            ],
         });
 
-        const orgMemberUserIds = orgMembers?.map(member => member?.user_id);
-        const membersProfileInfo = await UserProfile.findAll({
-            where: {
-                user_id: {
-                    [Op.in]: orgMemberUserIds,
-                }
-            },
-            attributes: ['profile_id', 'user_id', 'name', 'profile_image_url'],
-            raw: true,
-        });
-
-        const orgMembersInfo = orgMembers.map(member => {
-            const memberProfile = membersProfileInfo.filter(userProfile => userProfile.user_id === member.user_id);
-
-            if (memberProfile.length === 0) return null;
-            member = { ...member, ...memberProfile[0] };
-
-            return member;
-        });
-
-        const positions = await Positions.findAll({ raw: true });
-
-        const data = { orgMembersInfo, positions }
+        const data = { orgMembers }
 
         return res.status(200).json(catchSuccessResponse(`Organization member's details fetched successfully`, data));
 

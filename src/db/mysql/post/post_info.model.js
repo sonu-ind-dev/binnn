@@ -1,54 +1,54 @@
 import { DataTypes, Model } from "sequelize";
 
-export class Post extends Model { }
+export class PostInfo extends Model { }
 
-export function initializePostModel(sequelize) {
-    Post.init(
+export function initializePostInfoModel(sequelize) {
+    PostInfo.init(
         {
-            post_id: {
+            post_info_id: {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
                 primaryKey: true,
             },
-            posted_by_user_id: {
+            post_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
+                unique: true,
                 references: {
-                    model: "user",
-                    key: "user_id",
+                    model: "post",
+                    key: "post_id",
                 },
             },
-            posted_by_org_id: {
-                type: DataTypes.UUID,
-                allowNull: true,
-                references: {
-                    model: "organization",
-                    key: "org_id",
-                },
+            caption: {
+                type: DataTypes.STRING,
             },
-            visible: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: true,
+            first_image_url: {
+                type: DataTypes.STRING,
+                allowNull: false,
             },
-            status_id: {
+            images_count: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
-                defaultValue: 1,
-                references: {
-                    model: "status",
-                    key: "status_id",
-                },
-            }
+                defaultValue: 0,
+            },
+            latitude: {
+                type: DataTypes.DECIMAL,
+                allowNull: false,
+            },
+            longitude: {
+                type: DataTypes.DECIMAL,
+                allowNull: false,
+            },
         },
         {
             sequelize,
-            modelName: "Post",
-            tableName: "post",
+            modelName: "PostInfo",
+            tableName: "post_info",
             indexes: [],
         }
     )
 
-    return Post;
+    return PostInfo;
 }
 
 /**
@@ -59,9 +59,9 @@ export function initializePostModel(sequelize) {
  * ? Step 04: Change databaseTableUpdateFlag to false and tablesUpdateFlags of that particular table to false in /src/db/mysql/index.js file
  * & That's it your table related changes are completed.
  */
-export const postVersionInfo = Object.freeze({
-    version: "1.2.7",
-    description: "Making status_id foreign key and relation with status table",
+export const postInfoVersionInfo = Object.freeze({
+    version: "1.0.0",
+    description: "Initial Version",
     updated_by: "sonu.ind.dev@gmail.com",
     approved_by: "",
 })

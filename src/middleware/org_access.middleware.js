@@ -1,4 +1,4 @@
-import { OrgMember, Positions } from "../db/mysql/index.js";
+import { Organization, OrgMember, Positions } from "../db/mysql/index.js";
 import { catchErrorResponse, catchSuccessResponse, catchWarningResponse } from "../util/common.js";
 
 
@@ -39,9 +39,12 @@ export const memberAccessCheck = (activity = null) => {
         let errorMessage = '';
         try {
             const user_id = req.user_id ?? '1';
-            const org_id = req.body.org_id || req.params.org_id || req.headers.org_id;;
+            const org_id = req.body?.org_id || req.params?.org_id || req.headers?.org_id;
 
-            if (!org_id) next();
+            if (!org_id) {
+                next();
+                return;
+            }
 
             req.org_id = org_id;
 
@@ -57,39 +60,35 @@ export const memberAccessCheck = (activity = null) => {
                 return res.status(400).json(catchErrorResponse(errorMessage));
             }
 
+            const organization = await Organization.findByPk(org_id);
+
+            if (!organization) {
+                errorMessage = 'Organization not found';
+                return res.status(404).json(catchErrorResponse(errorMessage));
+            }
+
             const orgMember = await OrgMember.findOne({
                 where: {
                     org_id,
                     user_id,
                 },
-                attributes: ['member_position_id'],
-                raw: true,
+                attributes: ['member_position_id']
             });
 
-            if (!orgMember) {
+            if (!orgMember || !orgMember?.member_position_id) {
                 errorMessage = 'User is not a member or follower of this organization';
                 return res.status(403).json(catchWarningResponse(errorMessage));
             }
 
-            const memberPosition = await Positions.findByPk(
-                orgMember?.member_position_id,
-                {
-                    attributes: ['position_id'],
-                    raw: true
-                }
-            );
+            const haveAccess = check_task_access(orgMember?.member_position_id, activity);
 
-            if (!memberPosition) {
-                errorMessage = 'Member do not have any access to perform any task for this organization';
-                return res.status(403).json(catchWarningResponse(errorMessage));
+            // return res.status(200).json(catchSuccessResponse(`User have access to perform task: ${activity}`));
+            if (haveAccess) {
+                next();
+                return;
             }
 
-            const haveAccess = check_task_access(memberPosition.position_id, access_type);
-
-            // return res.status(200).json(catchSuccessResponse(`User have access to perform task: ${access_type}`));
-            if (haveAccess) next();
-
-            errorMessage = `User do not have any access to perform task: ${access_type}`;
+            errorMessage = `User do not have any access to perform task: ${activity}`;
             return res.status(403).json(catchWarningResponse(errorMessage));
 
         } catch (error) {

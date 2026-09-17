@@ -19,6 +19,9 @@ postRouter.get("/posts", checkAuth, postController.posts);
 /**
  * Get Tagged User & Organization Details Of A Post
  */
-postRouter.get("/post-tagged-info", checkAuth, postController.postTaggedInfo)
+postRouter.get("/post-tagged-info", checkAuth, postController.postTaggedInfo);
+
+// & Delete Post
+// & Edit Post - Caption, Tag Users, Tag Orgs (Images Can Not)
 
 export default postRouter;

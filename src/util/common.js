@@ -74,7 +74,7 @@ export const VerifyWithHash = (enteredValue, hashedValue) => {
  * @param {String} expiresIn Token expiry control
  */
 export const Generate_JWT_Token = ({ user_id, refresh_token_hash }, expiresIn) => {
-    const Token = jwt.sign({ user_id: user.user_id, refresh_token_hash: refresh_token_hash ?? null }, config.JWT_SECRET_KEY, { expiresIn: expiresIn });
+    const Token = jwt.sign({ user_id, refresh_token_hash: refresh_token_hash ?? null }, config.JWT_SECRET_KEY, { expiresIn: expiresIn });
     return Token;
 }
 

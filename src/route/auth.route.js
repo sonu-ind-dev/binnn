@@ -20,6 +20,9 @@ authRouter.post("/verify-otp", authController.verifyOtp);
  */
 authRouter.post("/login", authController.login);
 
+// & Get User Profile Info - For visitors
+// & Block Any User
+
 
 
 /**

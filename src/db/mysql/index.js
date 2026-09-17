@@ -9,6 +9,7 @@ import { initializeUserProfileModel, userProfileVersionInfo } from "./user/user_
 
 // Post Tables
 import { initializePostModel, postVersionInfo } from "./post/post.model.js";
+import { initializePostInfoModel, postInfoVersionInfo } from "./post/post_info.model.js";
 import { initializePostUserTagModel, postUserTagVersionInfo } from "./post/post_user_tag.model.js";
 import { initializePostOrgTagModel, postOrgTagVersionInfo } from "./post/post_org_tag.model.js";
 import { initializeStatusModel, statusVersionInfo } from "./post/status.model.js";
@@ -36,6 +37,7 @@ const tablesUpdateFlags = Object.freeze({
 
     // & User Models
     post: false,
+    post_info: false,
     post_user_tag: false,
     post_org_tag: false,
     status: false,
@@ -60,6 +62,7 @@ export const UserProfile = initializeUserProfileModel(sequelize);
 
 // & Export Our Post Models
 export const Post = initializePostModel(sequelize);
+export const PostInfo = initializePostInfoModel(sequelize);
 export const PostUserTag = initializePostUserTagModel(sequelize);
 export const PostOrgTag = initializePostOrgTagModel(sequelize);
 export const Status = initializeStatusModel(sequelize);
@@ -94,6 +97,11 @@ const tableRegistry = [
         tableName: "post",
         model: Post,
         versionInfo: { ...postVersionInfo, approved_by: postVersionInfo.approved_by.trim().length ? postVersionInfo.approved_by : config.MYSQL_TABLE_VERSION_APPROVED_BY },
+    },
+    {
+        tableName: "post_info",
+        model: PostInfo,
+        versionInfo: { ...postInfoVersionInfo, approved_by: postInfoVersionInfo.approved_by.trim().length ? postInfoVersionInfo.approved_by : config.MYSQL_TABLE_VERSION_APPROVED_BY },
     },
     {
         tableName: "post_user_tag",
@@ -138,7 +146,7 @@ const tableRegistry = [
 // & Foreign Key Relations
 // ! user_id Foreign Key
 // ? USER ? User & UserProfile user_id relation
-User.hasOne(UserProfile, { foreignKey: "user_id", sourceKey: "user_id", as: "profile" });
+User.hasOne(UserProfile, { foreignKey: "user_id", sourceKey: "user_id", as: "userProfile" });
 UserProfile.belongsTo(User, { foreignKey: "user_id", targetKey: "user_id", as: "user" });
 
 // ? POST ? User & Post - One to many relation
@@ -162,6 +170,10 @@ User.hasMany(OrgMember, { foreignKey: "user_id", sourceKey: "user_id", as: "orgM
 OrgMember.belongsTo(User, { foreignKey: "user_id", targetKey: "user_id", as: "user" });
 
 // ! post_id Foreign Key
+// ? POST ? Post & PostInfo - One to one relation
+Post.hasOne(PostInfo, { foreignKey: "post_id", sourceKey: "post_id", as: "postInfo" });
+PostInfo.belongsTo(Post, { foreignKey: "post_id", targetKey: "post_id", as: "Post" });
+
 // ? POST ? Post & PostUserTag - One to many relation
 Post.hasMany(PostUserTag, { foreignKey: "post_id", sourceKey: "post_id", as: "postUserTag" });
 PostUserTag.belongsTo(Post, { foreignKey: "post_id", targetKey: "post_id", as: "Post" });
@@ -191,7 +203,10 @@ OrgMember.belongsTo(Organization, { foreignKey: "org_id", targetKey: "org_id", a
 Positions.hasMany(OrgMember, { foreignKey: "member_position_id", sourceKey: "position_id", as: "orgMember" });
 OrgMember.belongsTo(Positions, { foreignKey: "member_position_id", targetKey: "position_id", as: "position" })
 
-
+// ! status_id Foreign Key
+// ? POST ? Post & Status - One to many relation
+Status.hasMany(Post, { foreignKey: "status_id", sourceKey: "status_id", as: "post" });
+Post.belongsTo(Status, { foreignKey: "status_id", targetKey: "status_id", as: "status" });
 
 
 export class TableVersionHistory extends Model { }

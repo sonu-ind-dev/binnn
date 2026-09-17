@@ -1,7 +1,6 @@
 import moment from "moment";
 import config from "../config/config.js";
 import RefreshTokenModel from "../db/mongo/refresh_token.model.js";
-import PostInfoModel from "../db/mongo/post/post_info.model.js";
 import { User, UserProfile, UserRegister } from "../db/mysql/index.js";
 import { catchSuccessResponse, catchWarningResponse, catchErrorResponse, GenerateHashed, VerifyWithHash, GenerateHashedOtp, Generate_JWT_Token } from "../util/common.js";
 
@@ -39,13 +38,9 @@ export const register = async (req, res) => {
         }
 
         // Handle if user already exist in user table
-        const user = await User.findOne({
-            where: { phone_number },
-            attributes: ['user_id'],
-            raw: true,
-        });
-        if (user?.user_id) {
-            errorMessage = 'Failed to register. Please check provided info & try again!';
+        const userCount = await User.count({ where: { phone_number } });
+        if (userCount > 0) {
+            errorMessage = 'User is already present.';
             return res.status(409).json(catchErrorResponse(errorMessage));
         }
 
@@ -141,15 +136,19 @@ export const verifyOtp = async (req, res) => {
         const now = moment.utc().valueOf();
 
         // If verification is currently blocked
-        if (user_register.verify_blocked && user_register.verify_blocked >= now) {
-            errorMessage = 'Verification temporarily blocked due to multiple failed attempts. Please try again later.';
-            return res.status(429).json(catchWarningResponse(errorMessage));
+        if (user_register.verify_blocked && user_register.verify_blocked) {
+            if (user_register.verify_blocked >= now) {
+                errorMessage = 'Verification temporarily blocked due to multiple failed attempts. Please try again later.';
+                return res.status(429).json(catchWarningResponse(errorMessage));
+            }
         }
 
         // If OTP expired
-        if (user_register.otp_expires_at && user_register.otp_expires_at < now) {
-            errorMessage = 'OTP has expired. Please request a new OTP.';
-            return res.status(400).json(catchWarningResponse(errorMessage));
+        if (user_register.otp_expires_at && user_register.otp_expires_at) {
+            if (user_register.otp_expires_at < now) {
+                errorMessage = 'OTP has expired. Please request a new OTP.';
+                return res.status(400).json(catchWarningResponse(errorMessage));
+            }
         }
 
         // If user already exists in main user table
@@ -186,7 +185,7 @@ export const verifyOtp = async (req, res) => {
         if (user_register.verify_count >= 5) {
             user_register.verify_blocked = moment.utc().add(1, 'minutes').valueOf();
             user_register.verify_count = 0;
-            user_register.otp_hash = await GenerateHashedOtp();
+            user_register.otp_hash = GenerateHashedOtp();
             await user_register.save();
 
             errorMessage = 'Too many incorrect OTP attempts. A new OTP has been sent and verification is blocked for 1 minute.';
@@ -236,29 +235,39 @@ export const login = async (req, res) => {
         }
 
         // Fetch user details if present & perform password checks
-        const user = await User.findOne({ where: { phone_number }, attributes: ['user_id', 'password'], raw: true });
+        let user = await User.findOne({
+            where: { phone_number },
+            attributes: ['user_id', 'phone_number', 'password_hash'],
+            include: [
+                {
+                    model: UserProfile,
+                    as: "userProfile",
+                },
+            ],
+        });
 
         if (!user) {
             errorMessage = 'User not found. Please re-check entered details.';
             return res.status(401).json(catchErrorResponse(errorMessage));
         }
 
-        const password_verified = VerifyWithHash(password, user?.password_hash);
+        user = user?.dataValues;
+
+        const password_verified = VerifyWithHash(password, user.password_hash);
+        delete user.password_hash;
 
         if (!password_verified) {
-            errorMessage = 'User not found. Please re-check entered details.';
+            errorMessage = 'Incorrect details. Please re-check entered details.';
             return res.status(401).json(catchErrorResponse(errorMessage));
         }
 
-        const user_profile = await UserProfile.findOne({ where: { user_id: user?.user_id } });
-
         // Create refresh token, access token & save refresh token in refresh_token collection
-        const refresh_token = Generate_JWT_Token({ user_id: user?.user_id }, "7d");
+        const refresh_token = Generate_JWT_Token({ user_id: user.user_id }, "7d");
         const refresh_token_hash = GenerateHashed(refresh_token);
 
         const refreshToken = await RefreshTokenModel.create({
             user_id: user.user_id,
-            refreshTokenHash,
+            refreshTokenHash: refresh_token_hash,
             ip: req.ip,
             userAgent: req.headers["user-agent"]
         });
@@ -275,8 +284,7 @@ export const login = async (req, res) => {
         });
 
         const data = {
-            user: { phone_number },
-            user_profile,
+            user,
             access_token,
         };
 

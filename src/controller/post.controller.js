@@ -1,8 +1,7 @@
 import { catchErrorResponse, catchSuccessResponse } from "../util/common.js";
-import { Organization, Post, PostOrgTag, PostUserTag, Status, User, UserProfile } from "../db/mysql/index.js";
-import PostInfoModel from "../db/mongo/post/post_info.model.js";
-import { raw } from "express";
+import { Organization, Post, PostInfo, PostOrgTag, PostUserTag, Status, User, UserProfile } from "../db/mysql/index.js";
 import { Op } from "sequelize";
+import PostImagesModel from "../db/mongo/post/post_images.model.js";
 
 
 
@@ -30,72 +29,107 @@ export const createPost = async (req, res) => {
     let errorMessage = '';
     try {
         const posted_by_user_id = req.user_id;
-        const posted_by_org_id = req.headers.org_id;
+        const posted_by_org_id = req.headers.org_id ?? null;
 
         let { tag_user_ids, tag_org_ids, post_info } = req.body;
-        tag_user_ids = [...new Set(tag_user_ids)];
-        tag_org_ids = [...new Set(tag_org_ids)];
+        tag_user_ids = [...new Set((tag_user_ids ?? []).filter(Boolean))];
+        tag_org_ids = [...new Set((tag_org_ids ?? []).filter(Boolean))];
 
-        const { caption, image_urls, latitude, longitude } = post_info ?? {};
+        const { caption, images_urls, latitude, longitude } = post_info ?? {};
 
-        if (!posted_by_user_id) {
-            errorMessage = 'Failed to fetch user_id from request';
+        if (!images_urls || images_urls?.length < 1 || !latitude || !longitude) {
+            errorMessage = 'Images, latitude & longitude are required.';
             return res.status(400).json(catchErrorResponse(errorMessage));
         }
 
-        // Post Creation
-        const post = await Post.create({ posted_by_user_id, posted_by_org_id: posted_by_org_id });
-        const post_id = post.post_id;
+        const first_image_url = images_urls?.[0];
+        const images_count = images_urls?.length;
 
-        if (!post_id) {
+        // Post Creation
+        const post = await Post.create({ posted_by_user_id, posted_by_org_id });
+
+        if (!post) {
             errorMessage = 'No post created';
             return res.status(400).json(catchErrorResponse(errorMessage));
         }
+        const post_id = post?.dataValues?.post_id;
 
-        const postInfo = await PostInfoModel.create({
-            post_id,
-            caption,
-            image_urls,
-            latitude,
-            longitude,
-            status_id: 0,
-        });
+        const postInfo = await PostInfo.create({ post_id, caption, first_image_url, images_count, latitude, longitude, status_id: 1, });
+
+        const postImages = await PostImagesModel.create({ post_id, images_urls, });
 
         // Tag Users
-        let postUsersTag = null, postOrgsTag = null;
-
-        if (tag_user_ids.length) {
+        if (tag_user_ids.length > 0) {
             const users = await User.findAll({
-                attributes: ['user_id'],
                 where: {
-                    user_id: tag_user_ids
+                    user_id: {
+                        [Op.in]: tag_user_ids,
+                        [Op.notIn]: [posted_by_user_id],
+                    },
                 },
+                attributes: ['user_id'],
                 raw: true
             });
-            const post_tag_users = users.map(user => ({ user_id: user.user_id, post_id }));
 
-            if (post_tag_users.length) {
-                postUsersTag = await PostUserTag.bulkCreate(post_tag_users);
+            if (users.length > 0) {
+                const post_tag_users = users.map(user => ({ user_id: user.user_id, post_id }));
+                await PostUserTag.bulkCreate(post_tag_users);
             }
         }
 
         // Tag Orgs
-        if (tag_org_ids.length) {
+        if (tag_org_ids.length > 0) {
             const orgs = await Organization.findAll({
                 attributes: ['org_id'],
                 where: {
-                    org_id: tag_org_ids
+                    org_id: {
+                        [Op.in]: tag_org_ids,
+                        [Op.notIn]: posted_by_org_id ? [posted_by_org_id] : [],
+                    },
                 },
                 raw: true
             });
-            const post_tag_orgs = orgs.map(org => ({ org_id: org.org_id, post_id }));
 
-            if (post_tag_orgs.length) {
-                postOrgsTag = await PostOrgTag.bulkCreate(post_tag_orgs);
+            if (orgs.length > 0) {
+                const post_tag_orgs = orgs.map(org => ({ org_id: org.org_id, post_id }));
+                await PostOrgTag.bulkCreate(post_tag_orgs);
             }
         }
 
-        const data = { post, postInfo, postUsersTag, postOrgsTag }
+        const postData = await Post.findByPk(post_id, {
+            include: [
+                {
+                    model: PostUserTag,
+                    as: "postUserTag",
+                    include: [
+                        {
+                            model: User,
+                            as: "user",
+                            include: [
+                                {
+                                    model: UserProfile,
+                                    as: "userProfile",
+                                    attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: PostOrgTag,
+                    as: "postOrgTag",
+                    include: [
+                        {
+                            model: Organization,
+                            as: "organization",
+                        },
+                    ],
+                },
+            ]
+        });
+
+        const data = { post: postData, postInfo, postImages };
+
         return res.status(201).json(catchSuccessResponse(`Post created successfully`, data));
 
     } catch (error) {
@@ -107,57 +141,72 @@ export const createPost = async (req, res) => {
 
 
 
-// Latest 24 hr ago posts not by user
+// ? PostInfo collection info is not included in response, Handle it.
 export const posts = async (req, res) => {
     let errorMessage = '';
     try {
-        const { user_id, latitude, longitude, offset, limit } = req.body;
+        const { is_feed, latitude, longitude, offset, limit } = req.body;
+        const user_id = req.user_id;
 
-        let posts = await Post.findAll({
-            where: {
-                posted_by_user_id: {
-                    [Op.ne]: [user_id]
+        const posts = await Post.findAll({
+            where: is_feed ?
+                {
+                    visible: true,
+                } : {
+                    posted_by_user_id: user_id,
+                    visible: true,
                 },
-                visible: true,
-            },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: ['user_id'],
+                    include: [
+                        {
+                            model: UserProfile,
+                            as: "userProfile",
+                            attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                        },
+                    ],
+                },
+                {
+                    model: PostUserTag,
+                    as: "postUserTag",
+                    include: [
+                        {
+                            model: User,
+                            as: "user",
+                            include: [
+                                {
+                                    model: UserProfile,
+                                    as: "userProfile",
+                                    attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: PostOrgTag,
+                    as: "postOrgTag",
+                    include: [
+                        {
+                            model: Organization,
+                            as: "organization",
+                        },
+                    ],
+                },
+                {
+                    model: Status,
+                    as: "status",
+                },
+            ],
             offset,
             limit,
+            order: [["createdAt", "DESC"]],
         });
 
-        posts = posts.map(async post => {
-            let ownerInfo = {};
-
-            if (post.posted_by_user_id) {
-                ownerInfo = await UserProfile.findOne({
-                    where: {
-                        user_id: post.posted_by_user_id,
-                    },
-                    attributes: ['profile_id', 'user_id', 'name', 'profile_image_url']
-                });
-            } else if (post.posted_by_org_id) {
-                ownerInfo = await Organization.findOne({
-                    where: {
-                        org_id: post.org_id,
-                    },
-                    attributes: ['org_id', 'name', 'org_code', 'profile_image_url']
-                });
-            }
-
-            const postInfo = await PostInfoModel.findOne({ where: { post_id: post.post_id } }).lean();
-
-            const tagUserCount = await PostUserTag.count({ where: { post_id: post.post_id } });
-            const tagOrgCount = await PostOrgTag.count({ where: { post_id: post.post_id } });
-
-
-            post.postInfo = postInfo;
-            post.ownerInfo = ownerInfo;
-            post.totalTagCount = tagUserCount + tagOrgCount;
-
-            return post;
-        });
-
-        const status = await Status.findAll({ raw: true });
-        const data = { posts, status };
+        const data = { posts };
 
         return res.status(200).json(catchSuccessResponse(`Latest post data fetched successfully`, data));
 
@@ -175,31 +224,31 @@ export const postTaggedInfo = async (req, res) => {
     try {
         const { post_id } = req.body;
 
-        let postTaggedUsers = await PostUserTag.findAll({ where: { post_id }, raw: true });
-        let postTaggedOrgs = await PostOrgTag.findAll({ where: { post_id }, raw: true });
-
-        postTaggedUsers = postTaggedUsers.map(async taggedUser => {
-            const userInfo = await UserProfile.findOne({
-                where: { user_id: postTaggedUsers.user_id },
-                attributes: ['profile_id', 'user_id', 'name', 'profile_image_url'],
-                raw: true,
-            });
-
-            taggedUser = { ...taggedUser, ...userInfo };
-
-            return taggedUser;
+        const postTaggedUsers = await PostUserTag.findAll({
+            where: { post_id },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    include: [
+                        {
+                            model: UserProfile,
+                            as: "userProfile",
+                            attributes: ['profile_id', 'user_id', 'name', 'gender', 'profile_image_url',],
+                        },
+                    ],
+                },
+            ],
         });
 
-        postTaggedOrgs = postTaggedOrgs.map(async taggedOrg => {
-            const orgInfo = await Organization.findOne({
-                where: { org_id: taggedOrg.org_id },
-                attributes: ['org_id', 'org_code', 'name', 'profile_image_url'],
-                raw: true,
-            });
-
-            taggedOrg = { ...taggedOrg, ...orgInfo };
-
-            return taggedOrg;
+        const postTaggedOrgs = await PostOrgTag.findAll({
+            where: { post_id },
+            include: [
+                {
+                    model: Organization,
+                    as: "organization",
+                },
+            ],
         });
 
         const data = { postTaggedUsers, postTaggedOrgs };
